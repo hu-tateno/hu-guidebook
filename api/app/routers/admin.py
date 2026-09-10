@@ -200,18 +200,29 @@ def export_csv(
     )
 
 
-@router.post("/seed")
+@router.get("/seed")
 def seed(
+    token: str,
     embed_all: bool = False,
     db: Session = Depends(get_db),
-    _: None = Depends(require_admin),
 ) -> dict:
     """One-time bootstrap: ingest handbook_seed/*.pdf (bundled into this Vercel function
     specifically so this endpoint can reach them — see api/AGENTS.md) and embed any chunk
     missing a vector. Safe to call more than once: ingestion upserts by admission_year via
     content hash, and embedding only fills gaps (embed_all=true forces re-embedding
     everything, e.g. after switching Cohere's embed model). If a call times out partway
-    through, just call it again — both steps pick up where they left off."""
+    through, just call it again — both steps pick up where they left off.
+
+    GET with a `token` query param (checked against ADMIN_SESSION_SECRET) rather than the
+    normal cookie-based admin session, so this can be triggered with a single URL fetch —
+    there's no way to drive a POST + cookie login from outside this deployment's own request
+    tooling. Remove this endpoint once the target DB has been seeded (see api/AGENTS.md); a
+    secret in a URL query string is an acceptable one-time bootstrap tradeoff, not a pattern
+    to keep around.
+    """
+    settings = get_settings()
+    if not settings.admin_enabled or not hmac.compare_digest(token, settings.admin_session_secret):
+        raise HTTPException(status_code=401, detail="invalid token")
     documents_ingested = ingest_all(db, _SEED_HANDBOOK_DIR)
     chunks_embedded = reembed_chunks(db, only_missing=not embed_all)
     return {"documents_ingested": documents_ingested, "chunks_embedded": chunks_embedded}

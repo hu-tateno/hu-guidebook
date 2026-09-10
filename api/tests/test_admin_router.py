@@ -128,10 +128,10 @@ def test_export_csv_never_includes_device_id(admin_settings):
     assert "query_text" in response.text
 
 
-def test_seed_requires_admin_session(admin_settings):
+def test_seed_requires_valid_token(admin_settings):
     client = _client_with_db(MagicMock())
     try:
-        response = client.post("/api/admin/seed")
+        response = client.get("/api/admin/seed", params={"token": "wrong-token"})
     finally:
         app.dependency_overrides.pop(get_db, None)
     assert response.status_code == 401
@@ -143,8 +143,7 @@ def test_seed_calls_ingest_then_reembed_and_returns_counts(admin_settings, monke
 
     client = _client_with_db(MagicMock())
     try:
-        client.post("/api/admin/login", json={"password": "test-admin-pw"})
-        response = client.post("/api/admin/seed")
+        response = client.get("/api/admin/seed", params={"token": "test-admin-secret"})
     finally:
         app.dependency_overrides.pop(get_db, None)
 
@@ -158,8 +157,7 @@ def test_seed_embed_all_forces_full_reembed(admin_settings, monkeypatch):
 
     client = _client_with_db(MagicMock())
     try:
-        client.post("/api/admin/login", json={"password": "test-admin-pw"})
-        response = client.post("/api/admin/seed", params={"embed_all": "true"})
+        response = client.get("/api/admin/seed", params={"token": "test-admin-secret", "embed_all": "true"})
     finally:
         app.dependency_overrides.pop(get_db, None)
 
