@@ -24,6 +24,12 @@ FastAPI backend. See root `AGENTS.md` first — this file only adds backend-spec
   it on every request. `web/public/handbook/` is NOT part of this bundle (outside `api/`), so
   `GET /api/documents/{id}/file` only works off-Vercel (local dev, Render); the deployed
   frontend fetches PDFs from its own `/handbook/*.pdf` static assets instead.
+- `handbook_seed/` + `POST /api/admin/seed` — a **temporary** duplicate of the handbook PDFs
+  bundled into `api/` solely so the deployed Vercel function (which can reach Supabase/Cohere,
+  unlike a local sandbox with restricted egress) can ingest+embed them via one authenticated
+  admin call, instead of requiring `mise run setup` on a real machine. Delete `handbook_seed/`
+  and the `/seed` endpoint once the target Supabase DB has been seeded — don't leave 50+MB of
+  duplicated PDFs in every future deploy.
 
 ## Constraints
 

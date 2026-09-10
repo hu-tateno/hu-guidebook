@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.db.session import get_db
 from app.main import app
+from app.routers import admin as admin_router
 
 
 def _client_with_db(fake_db):
@@ -125,3 +126,41 @@ def test_export_csv_never_includes_device_id(admin_settings):
     assert "device_id" not in response.text
     assert "device-" not in response.text
     assert "query_text" in response.text
+
+
+def test_seed_requires_admin_session(admin_settings):
+    client = _client_with_db(MagicMock())
+    try:
+        response = client.post("/api/admin/seed")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+    assert response.status_code == 401
+
+
+def test_seed_calls_ingest_then_reembed_and_returns_counts(admin_settings, monkeypatch):
+    monkeypatch.setattr(admin_router, "ingest_all", lambda db, handbook_dir: 3)
+    monkeypatch.setattr(admin_router, "reembed_chunks", lambda db, only_missing: 42 if only_missing else 999)
+
+    client = _client_with_db(MagicMock())
+    try:
+        client.post("/api/admin/login", json={"password": "test-admin-pw"})
+        response = client.post("/api/admin/seed")
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+    assert response.status_code == 200
+    assert response.json() == {"documents_ingested": 3, "chunks_embedded": 42}
+
+
+def test_seed_embed_all_forces_full_reembed(admin_settings, monkeypatch):
+    monkeypatch.setattr(admin_router, "ingest_all", lambda db, handbook_dir: 0)
+    monkeypatch.setattr(admin_router, "reembed_chunks", lambda db, only_missing: 42 if only_missing else 999)
+
+    client = _client_with_db(MagicMock())
+    try:
+        client.post("/api/admin/login", json={"password": "test-admin-pw"})
+        response = client.post("/api/admin/seed", params={"embed_all": "true"})
+    finally:
+        app.dependency_overrides.pop(get_db, None)
+
+    assert response.json()["chunks_embedded"] == 999

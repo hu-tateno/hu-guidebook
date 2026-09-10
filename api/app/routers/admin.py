@@ -11,6 +11,7 @@ import csv
 import hmac
 import io
 from dataclasses import asdict
+from pathlib import Path
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
@@ -21,8 +22,13 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db.models import Evaluation, SearchQuery, StageResult
 from app.db.session import get_db
+from app.scripts.ingest import ingest_all
+from app.scripts.reembed import reembed as reembed_chunks
 from app.services.admin_auth import COOKIE_NAME, create_session_cookie_value, verify_session_cookie
 from app.services.admin_metrics import compute_evaluation_stats
+
+# One-time seed data for the /seed endpoint below — see its docstring.
+_SEED_HANDBOOK_DIR = Path(__file__).resolve().parent.parent.parent / "handbook_seed"
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -192,3 +198,20 @@ def export_csv(
     return StreamingResponse(
         buffer, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=evaluations.csv"}
     )
+
+
+@router.post("/seed")
+def seed(
+    embed_all: bool = False,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin),
+) -> dict:
+    """One-time bootstrap: ingest handbook_seed/*.pdf (bundled into this Vercel function
+    specifically so this endpoint can reach them — see api/AGENTS.md) and embed any chunk
+    missing a vector. Safe to call more than once: ingestion upserts by admission_year via
+    content hash, and embedding only fills gaps (embed_all=true forces re-embedding
+    everything, e.g. after switching Cohere's embed model). If a call times out partway
+    through, just call it again — both steps pick up where they left off."""
+    documents_ingested = ingest_all(db, _SEED_HANDBOOK_DIR)
+    chunks_embedded = reembed_chunks(db, only_missing=not embed_all)
+    return {"documents_ingested": documents_ingested, "chunks_embedded": chunks_embedded}
