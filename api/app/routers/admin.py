@@ -52,7 +52,12 @@ def login(payload: LoginRequest, response: Response) -> dict[str, str]:
         key=COOKIE_NAME,
         value=create_session_cookie_value(),
         httponly=True,
-        samesite="lax",
+        # web and api are separate Vercel projects on different domains — this is a genuine
+        # cross-site request, so SameSite=Lax (which withholds the cookie on fetch/XHR)
+        # would silently break admin login. None+Secure is required for that, and requires
+        # HTTPS: fine on Vercel, but plain http://localhost dev won't receive this cookie.
+        samesite="none",
+        secure=True,
         max_age=settings.admin_session_hours * 3600,
     )
     return {"status": "ok"}
@@ -60,7 +65,7 @@ def login(payload: LoginRequest, response: Response) -> dict[str, str]:
 
 @router.post("/logout")
 def logout(response: Response) -> dict[str, str]:
-    response.delete_cookie(COOKIE_NAME)
+    response.delete_cookie(COOKIE_NAME, samesite="none", secure=True)
     return {"status": "ok"}
 
 

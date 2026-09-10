@@ -26,8 +26,13 @@ class Settings(BaseSettings):
 
     embedding_dimensions: int = 1024
 
-    handbook_dir: str = str(_REPO_ROOT / "handbook")
-    lexicon_path: str = str(_REPO_ROOT / "data" / "search_lexicon.yaml")
+    # web/public/handbook so the Next.js app can also serve these PDFs as static assets
+    # (Vercel Python functions only bundle files under this project's own root directory —
+    # `api/` — so this path is only reachable outside Vercel, e.g. local dev or Render).
+    handbook_dir: str = str(_REPO_ROOT / "web" / "public" / "handbook")
+    # Inside api/ (not repo-root data/) so it's part of the Vercel function bundle: Stage 2
+    # reads this file on every search request, not just at ingest time.
+    lexicon_path: str = str(_API_DIR / "data" / "search_lexicon.yaml")
 
     admin_password: str = ""
     admin_session_secret: str = ""

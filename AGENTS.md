@@ -31,7 +31,7 @@ add it behind a provider abstraction rather than replacing the Cohere path.
   endpoints. Admin endpoints may show search traces/low-rated questions (for teacher review) but
   must never expose anonymous device IDs, in the UI or in CSV export.
 - Do not commit `.env`, API keys, or generated caches.
-- Treat PDFs under `handbook/` as immutable source data.
+- Treat PDFs under `web/public/handbook/` as immutable source data.
 - Cohere calls (`api/app/services/cohere_client.py`) must have timeouts and fail gracefully —
   a Cohere error or rate limit must fall back to the Stage 1-2 (non-AI) result, never a 500.
 - Run the smallest relevant tests before handoff.

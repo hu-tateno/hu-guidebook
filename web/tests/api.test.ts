@@ -68,8 +68,8 @@ describe("popularHighlights()", () => {
 });
 
 describe("URL builders", () => {
-  it("documentFileUrl points at the API's file endpoint", () => {
-    expect(documentFileUrl(7)).toBe("http://localhost:8000/api/documents/7/file");
+  it("documentFileUrl points at this app's own static handbook/ assets", () => {
+    expect(documentFileUrl("management_guidance2024.pdf")).toBe("/handbook/management_guidance2024.pdf");
   });
 
   it("adminExportCsvUrl omits admission_year when not given", () => {

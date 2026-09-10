@@ -3,8 +3,9 @@
 入学年度別の履修の手引きを、段階的な検索、根拠付き回答、PDFハイライト、匿名集合知とともに閲覧する教材アプリです。WebMCPは使用しません。
 
 > **現在のフェーズ: コンセプト確認用のクラウド無料枠構成。** Docker/Ollama/ローカルDBは前提とせず、
-> Vercel（Web）+ Render（API）+ Supabase（DB）+ Cohere API（生成AI/Embedding/Rerank、無料トライアル）
-> だけで動作します。
+> Vercel（Web + API、どちらもVercelプロジェクト）+ Supabase（DB）+ Cohere API（生成AI/Embedding/
+> Rerank、無料トライアル）だけで動作します。APIはVercel Python Serverless Functionsとして
+> `api/`をデプロイします。長時間実行が心配な場合はRender（`render.yaml`同梱）に差し替え可能です。
 
 ## 学生向けの使い方
 
@@ -14,7 +15,7 @@ Stage 1とStage 2はCohere側の障害・レート制限時でも動作するよ
 ## 6段階の検索
 
 1. 質問文そのままの文字列検索
-2. `data/search_lexicon.yaml`による学生語の制度用語への展開
+2. `api/data/search_lexicon.yaml`による学生語の制度用語への展開
 3. Cohere Chat APIによる検索語追加
 4. Embedding（Cohere Embed）と文字検索の統合
 5. Cohere Rerank APIによる再順位付け
@@ -48,21 +49,23 @@ mise run setup
 
 ## クラウドへのデプロイ
 
-初回は次の順序で進めると環境変数の行き来がスムーズです。
+初回は次の順序で進めると環境変数の行き来がスムーズです。Vercel上に**2つのプロジェクト**（web用・api用）を作る点に注意してください。
 
-1. **Supabase**: 新規プロジェクトを作成し、Database の接続文字列（`postgresql+psycopg://...`形式に直したもの）を控えます。`vector`拡張は`mise run setup`（`alembic upgrade head`）が有効化するので、事前作業は不要です。
+1. **Supabase**: プロジェクトを作成（または既存のものを使用）し、Database の接続文字列（`postgresql+psycopg://...`形式に直したもの）を控えます。`vector`拡張は`mise run setup`（`alembic upgrade head`）が有効化するので事前作業は不要です。
 2. **Cohere**: https://dashboard.cohere.com/api-keys で無料トライアルキーを取得します。
-3. **Render**: このリポジトリを連携し、"New +" → "Blueprint" でルートの`render.yaml`を選択してデプロイします（`api/`をWeb Serviceとしてビルド・起動します）。ダッシュボードで`DATABASE_URL`・`COHERE_API_KEY`・`ADMIN_PASSWORD`・`ADMIN_SESSION_SECRET`を設定してください（`CORS_ALLOW_ORIGINS`は手順5で設定）。無料プランは非アクセス時にスリープします。デプロイ後のURL（`https://xxx.onrender.com`）を控えます。
-4. **Vercel**: リポジトリをインポートし、プロジェクト設定で Root Directory を`web`にします。環境変数`NEXT_PUBLIC_API_BASE_URL`に手順3のRender URLを設定してデプロイします。デプロイ後のURL（`https://xxx.vercel.app`）を控えます。
-5. **RenderのCORSを更新**: Renderの`CORS_ALLOW_ORIGINS`に手順4のVercel URLを設定し、再デプロイします。
-6. **PDF取り込み・Embedding生成**: ローカルの`.env`に手順1・2の値を設定し、`mise run setup`（初回）または`mise run ingest && mise run reembed`（再取り込み時）を実行します。本番のSupabase DBに直接書き込む運用のため、Render無料枠でPyMuPDF処理やEmbedding生成を都度実行することはありません。
+3. **Vercel（API）**: このリポジトリをインポートし、Root Directory を`api`にしたプロジェクトを作成します（Vercel Python Serverless Functionsとして`api/api/index.py`がエントリポイントになります）。環境変数に`DATABASE_URL`・`COHERE_API_KEY`・`ADMIN_PASSWORD`・`ADMIN_SESSION_SECRET`を設定してください（`CORS_ALLOW_ORIGINS`は手順5で設定）。デプロイ後のURL（`https://xxx.vercel.app`）を控えます。
+   - 代わりにRenderを使う場合: ルートの`render.yaml`（Blueprint）で`api/`をWeb Serviceとしてデプロイできます。常時起動したいとき・実行時間制限が気になるときはこちらを推奨します。
+4. **Vercel（Web）**: 同じリポジトリで、Root Directory を`web`にした別プロジェクトを作成します。環境変数`NEXT_PUBLIC_API_BASE_URL`に手順3のURLを設定してデプロイします。デプロイ後のURL（`https://xxx.vercel.app`）を控えます。
+5. **APIのCORSを更新**: 手順3のプロジェクトの`CORS_ALLOW_ORIGINS`に手順4のVercel URLを設定し、再デプロイします。管理者ログインはWeb/APIが別ドメインになるため、Cookieは`SameSite=None; Secure`で発行されます（HTTPS必須。ローカルの`http://localhost`では管理者ログインは動作しません）。
+6. **PDF取り込み・Embedding生成**: ローカルの`.env`に手順1・2の値を設定し、`mise run setup`（初回）または`mise run ingest && mise run reembed`（再取り込み時）を実行します。本番のSupabase DBに直接書き込む運用のため、デプロイ済みAPI側でPyMuPDF処理やEmbedding生成を都度実行することはありません。
 
 ## 構成
 
 - `web`: Next.js、PDF.js、検索・閲覧UI
 - `api`: FastAPI、PyMuPDF、検索・回答・集計API（Cohere API呼び出しを含む）
-- `handbook`: 2022〜2026年度PDF
-- `data/search_lexicon.yaml`: 学生語→制度用語の辞書
+- `web/public/handbook`: 2022〜2026年度PDF（Next.jsが静的配信。Vercel Python Functionsは
+  自プロジェクトのルート外のファイルを含められないため、APIではなくここに置いています）
+- `api/data/search_lexicon.yaml`: 学生語→制度用語の辞書（APIが検索時に読むためapi/配下に配置）
 - `data/evaluation.json`: 教員用評価質問の雛形
 - `AGENTS.md`, `api/AGENTS.md`, `web/AGENTS.md`: コーディングエージェント向け指示
 

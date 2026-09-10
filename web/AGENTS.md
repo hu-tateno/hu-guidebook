@@ -7,7 +7,13 @@ Next.js (App Router, TypeScript) frontend. See root `AGENTS.md` first.
 - `app/page.tsx` — search + PDF viewer + highlight + evaluation UI (client component).
 - `app/admin/page.tsx` — admin login + dashboard.
 - `lib/api.ts` — the only place that calls the backend (`NEXT_PUBLIC_API_BASE_URL`). Add new
-  endpoints here rather than calling `fetch` directly from a component.
+  endpoints here rather than calling `fetch` directly from a component. `documentFileUrl()` is
+  the exception — it points at this app's own `public/handbook/*.pdf`, not the API (see below).
+- `public/handbook/` — the handbook PDFs, served as static assets by this app rather than by
+  the API. This is deliberate: on Vercel, the API is a separate Python Serverless Functions
+  project whose bundle only contains its own project root (`api/`), so it can't see files that
+  live under `web/`. Don't move these PDFs back under the API's directory tree without also
+  reconciling `api/app/config.py`'s `handbook_dir`.
 - `lib/device.ts` — anonymous per-browser device id (localStorage). Never log it or send it
   anywhere but this app's own API.
 - `components/PdfViewer.tsx` — wraps `react-pdf`/`pdfjs-dist`. This touches browser-only

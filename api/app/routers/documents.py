@@ -19,22 +19,31 @@ class DocumentOut(BaseModel):
     admission_year: int
     title: str
     page_count: int
+    source_filename: str
 
 
 @router.get("/documents", response_model=list[DocumentOut])
 def list_documents(db: Session = Depends(get_db)) -> list[DocumentOut]:
     docs = db.query(Document).order_by(Document.admission_year.desc()).all()
     return [
-        DocumentOut(id=d.id, admission_year=d.admission_year, title=d.title, page_count=d.page_count) for d in docs
+        DocumentOut(
+            id=d.id,
+            admission_year=d.admission_year,
+            title=d.title,
+            page_count=d.page_count,
+            source_filename=d.source_filename,
+        )
+        for d in docs
     ]
 
 
 @router.get("/documents/{document_id}/file")
 def get_document_file(document_id: int, db: Session = Depends(get_db)) -> FileResponse:
-    """Serve the immutable source PDF so the frontend's PDF.js viewer can render it.
-
-    handbook/ stays the single source of truth (not duplicated into the web app's static
-    assets); the web app fetches this endpoint via NEXT_PUBLIC_API_BASE_URL.
+    """Serve the source PDF from disk. On the Vercel deployment profile the frontend instead
+    fetches these PDFs directly from web/public/handbook/ (a Vercel Python function only
+    bundles files under its own project root, so this endpoint can't see that directory
+    there) — this stays as a fallback for deployment profiles where the whole repo checkout
+    is on disk next to the API process (local dev, Render).
     """
     document = db.get(Document, document_id)
     if document is None:

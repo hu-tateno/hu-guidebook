@@ -16,7 +16,14 @@ FastAPI backend. See root `AGENTS.md` first — this file only adds backend-spec
 - `app/db/scoping.py` — the only sanctioned way to query `chunks`/`highlights`; always pass
   `admission_year`. Don't write a raw `select(Chunk)` elsewhere.
 - `app/scripts/ingest.py` / `reembed.py` — CLIs run locally (`mise run ingest` / `reembed`)
-  against the Supabase DB, not part of the deployed Render service's request path.
+  against the Supabase DB, not part of the deployed service's request path.
+- `api/index.py` + `vercel.json` — the Vercel Python Serverless Functions entrypoint (zero-
+  config: Vercel scans `<root directory>/api/*.py`; since this project's own root directory
+  is `api/`, that means `api/api/*.py`, hence the nesting). `data/search_lexicon.yaml` lives
+  inside `api/` (not repo-root `data/`) so it's part of that function's bundle — Stage 2 reads
+  it on every request. `web/public/handbook/` is NOT part of this bundle (outside `api/`), so
+  `GET /api/documents/{id}/file` only works off-Vercel (local dev, Render); the deployed
+  frontend fetches PDFs from its own `/handbook/*.pdf` static assets instead.
 
 ## Constraints
 

@@ -8,7 +8,9 @@ from app.main import app
 
 def _client_with_db(fake_db):
     app.dependency_overrides[get_db] = lambda: fake_db
-    return TestClient(app)
+    # https base_url so the admin cookie's Secure attribute (required for cross-site
+    # SameSite=None — see app/routers/admin.py) is actually stored by the test client.
+    return TestClient(app, base_url="https://testserver")
 
 
 def test_admin_disabled_returns_404_for_login(admin_disabled):

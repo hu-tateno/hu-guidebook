@@ -206,7 +206,7 @@ export default function HomePage() {
             <div style={{ flex: "1 1 420px", minWidth: 320 }}>
               {selectedDocument && selectedChunk && (
                 <PdfViewer
-                  fileUrl={documentFileUrl(selectedDocument.id)}
+                  fileUrl={documentFileUrl(selectedDocument.source_filename)}
                   page={selectedChunk.page_number}
                   highlight={{ page: selectedChunk.page_number, bbox: selectedChunk.bbox }}
                 />

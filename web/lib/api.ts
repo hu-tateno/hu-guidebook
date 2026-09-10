@@ -5,6 +5,7 @@ export interface DocumentOut {
   admission_year: number;
   title: string;
   page_count: number;
+  source_filename: string;
 }
 
 export interface ChunkOut {
@@ -58,8 +59,11 @@ export function listDocuments(): Promise<DocumentOut[]> {
   return apiFetch<DocumentOut[]>("/api/documents");
 }
 
-export function documentFileUrl(documentId: number): string {
-  return `${API_BASE}/api/documents/${documentId}/file`;
+/** Served as a static asset from this Next.js app's own public/handbook/ (see
+ * web/AGENTS.md) — not via the API, so it works on Vercel's Python serverless functions,
+ * which only bundle files under the API project's own root directory. */
+export function documentFileUrl(sourceFilename: string): string {
+  return `/handbook/${sourceFilename}`;
 }
 
 export function search(params: {

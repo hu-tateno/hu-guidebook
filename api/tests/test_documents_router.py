@@ -31,8 +31,14 @@ def test_list_documents_returns_expected_fields():
     assert response.status_code == 200
     body = response.json()
     assert body == [
-        {"id": 1, "admission_year": 2024, "title": "2024年度 履修の手引き", "page_count": 55},
-        {"id": 2, "admission_year": 2025, "title": "2025年度 履修の手引き", "page_count": 60},
+        {
+            "id": 1, "admission_year": 2024, "title": "2024年度 履修の手引き", "page_count": 55,
+            "source_filename": "management_guidance2024.pdf",
+        },
+        {
+            "id": 2, "admission_year": 2025, "title": "2025年度 履修の手引き", "page_count": 60,
+            "source_filename": "management_guidance2025.pdf",
+        },
     ]
 
 

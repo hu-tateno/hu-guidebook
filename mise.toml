@@ -84,7 +84,7 @@ done
 """
 
 [tasks.restart]
-description = "Restart api/web (e.g. after editing data/search_lexicon.yaml)"
+description = "Restart api/web (e.g. after editing api/data/search_lexicon.yaml)"
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
@@ -93,7 +93,7 @@ mise run start
 """
 
 [tasks.ingest]
-description = "Re-run PDF ingestion against DATABASE_URL (only needed when handbook/ PDFs change)"
+description = "Re-run PDF ingestion against DATABASE_URL (only needed when web/public/handbook/ PDFs change)"
 run = "cd api && .venv/bin/python -m app.scripts.ingest"
 
 [tasks.reembed]
