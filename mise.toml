@@ -1,0 +1,110 @@
+[tools]
+python = "3.11"
+node = "20"
+
+[env]
+_.file = ".env"
+
+# This project targets a cloud-only, free-tier deployment (Vercel + Render + Supabase +
+# Cohere API) — there is no Docker/Ollama/local Postgres in this profile. The tasks below
+# are for local development against the same cloud Supabase DB and Cohere API used in
+# production; set DATABASE_URL / COHERE_API_KEY in .env before running any of them.
+# [env]._.file above loads .env for every task (including `next dev`, so
+# NEXT_PUBLIC_API_BASE_URL reaches the web build too — Next.js only auto-loads env files
+# from web/, not the repo root).
+
+[tasks.bootstrap]
+description = "Install Python and Node dependencies"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+python3 -m venv api/.venv
+api/.venv/bin/pip install --quiet --upgrade pip
+api/.venv/bin/pip install --quiet -r api/requirements.txt
+(cd web && npm install)
+"""
+
+[tasks.setup]
+description = "First run: install deps, migrate the Supabase DB, ingest PDFs, generate embeddings"
+depends = ["bootstrap"]
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+(cd api && .venv/bin/alembic upgrade head)
+(cd api && .venv/bin/python -m app.scripts.ingest)
+(cd api && .venv/bin/python -m app.scripts.reembed)
+echo "Setup complete. Run 'mise run dev' for local servers, or push to deploy on Render/Vercel."
+"""
+
+[tasks.dev]
+description = "Run the API and web dev servers in the foreground (Ctrl+C stops both)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+trap 'kill 0' EXIT
+(cd api && .venv/bin/uvicorn app.main:app --reload --port 8000) &
+(cd web && npm run dev) &
+wait
+"""
+
+[tasks.start]
+description = "Start the API and web dev servers in the background"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+mkdir -p .mise-run
+(cd api && nohup .venv/bin/uvicorn app.main:app --reload --port 8000 > ../.mise-run/api.log 2>&1 &
+ echo $! > ../.mise-run/api.pid)
+(cd web && nohup npm run dev > ../.mise-run/web.log 2>&1 &
+ echo $! > ../.mise-run/web.pid)
+echo "Started. Logs: .mise-run/api.log, .mise-run/web.log. Run 'mise run stop' to stop."
+"""
+
+[tasks.stop]
+description = "Stop the background dev servers started by 'mise run start'"
+run = """
+#!/usr/bin/env bash
+[ -f .mise-run/api.pid ] && kill "$(cat .mise-run/api.pid)" 2>/dev/null
+[ -f .mise-run/web.pid ] && kill "$(cat .mise-run/web.pid)" 2>/dev/null
+rm -f .mise-run/api.pid .mise-run/web.pid
+echo "Stopped."
+"""
+
+[tasks.status]
+description = "Show whether the background dev servers are running"
+run = """
+#!/usr/bin/env bash
+for name in api web; do
+  if [ -f .mise-run/$name.pid ] && kill -0 "$(cat .mise-run/$name.pid)" 2>/dev/null; then
+    echo "$name: running (pid $(cat .mise-run/$name.pid))"
+  else
+    echo "$name: stopped"
+  fi
+done
+"""
+
+[tasks.restart]
+description = "Restart api/web (e.g. after editing data/search_lexicon.yaml)"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+mise run stop
+mise run start
+"""
+
+[tasks.ingest]
+description = "Re-run PDF ingestion against DATABASE_URL (only needed when handbook/ PDFs change)"
+run = "cd api && .venv/bin/python -m app.scripts.ingest"
+
+[tasks.reembed]
+description = "Regenerate all chunk embeddings via the Cohere Embed API"
+run = "cd api && .venv/bin/python -m app.scripts.reembed"
+
+[tasks.test]
+description = "Run backend tests, frontend tests, and a production frontend build"
+run = """
+#!/usr/bin/env bash
+set -euo pipefail
+(cd api && .venv/bin/pytest -q)
+(cd web && npm test -- --run && npm run build)
+"""

@@ -1,0 +1,19 @@
+# environment
+.env
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# node
+web/node_modules/
+web/.next/
+web/coverage/
+
+# local dev server logs/pids (mise run start/stop)
+.mise-run/
+
+# editor
+.DS_Store

@@ -1,0 +1,17 @@
+{
+  "description": "教員が動作確認・評価に使う質問セットの雛形。admission_year/category/question は自由に編集・追加してください。expected_keywords は、AIの回答や検索結果の根拠に含まれていてほしい語のヒントです（自動採点はしません。目視確認用）。/admin の「低評価の質問」と合わせて、data/search_lexicon.yaml の改善に使えます。",
+  "questions": [
+    { "admission_year": 2024, "category": "休学", "question": "休学したい場合はどうすればいいですか", "expected_keywords": ["休学願", "学務課"] },
+    { "admission_year": 2024, "category": "卒業要件", "question": "卒業に必要な単位数を教えてください", "expected_keywords": ["卒業要件", "単位"] },
+    { "admission_year": 2024, "category": "留年", "question": "単位を落とすと留年しますか", "expected_keywords": ["原級", "修業年限"] },
+    { "admission_year": 2024, "category": "GPA", "question": "GPAはどうやって計算されますか", "expected_keywords": ["成績評価"] },
+    { "admission_year": 2024, "category": "履修登録", "question": "履修登録はいつまでにすればいいですか", "expected_keywords": ["履修登録", "履修期間"] },
+    { "admission_year": 2024, "category": "シラバス", "question": "シラバスはどこで確認できますか", "expected_keywords": ["授業計画"] },
+    { "admission_year": 2024, "category": "転学部", "question": "他の学部に移りたい場合はどうすればいいですか", "expected_keywords": ["転学部"] },
+    { "admission_year": 2024, "category": "退学", "question": "退学の手続きを教えてください", "expected_keywords": ["退学", "除籍"] },
+    { "admission_year": 2024, "category": "奨学金", "question": "奨学金の申請方法を教えてください", "expected_keywords": ["奨学金", "学生支援"] },
+    { "admission_year": 2024, "category": "追試", "question": "試験を受けられなかった場合の追試はありますか", "expected_keywords": ["追試験"] },
+    { "admission_year": 2024, "category": "卒論", "question": "卒業論文はいつから準備すればいいですか", "expected_keywords": ["卒業論文", "卒業研究"] },
+    { "admission_year": 2024, "category": "教職", "question": "教職課程を履修するにはどうすればいいですか", "expected_keywords": ["教職課程"] }
+  ]
+}
