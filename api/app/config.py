@@ -1,7 +1,11 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+_BLANK_FALLS_BACK_TO_DEFAULT = ("cohere_timeout_seconds", "embedding_dimensions", "admin_session_hours")
 
 _API_DIR = Path(__file__).resolve().parent.parent  # .../api
 _REPO_ROOT = _API_DIR.parent
@@ -39,6 +43,20 @@ class Settings(BaseSettings):
     admin_session_hours: int = 8
 
     cors_allow_origins: str = "http://localhost:3000"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _drop_blank_numeric_env_vars(cls, data: Any) -> Any:
+        # Some hosting dashboards (e.g. Vercel's "detected env vars" import UI) create an env
+        # var entry with an empty string rather than omitting it entirely. An empty string
+        # isn't a valid float/int, so without this a single blank numeric field crashes the
+        # whole app at import time. Dropping the key here makes pydantic fall back to the
+        # field's own default, same as if the env var had never been set.
+        if isinstance(data, dict):
+            for key in _BLANK_FALLS_BACK_TO_DEFAULT:
+                if data.get(key) == "":
+                    del data[key]
+        return data
 
     @property
     def admin_enabled(self) -> bool:
